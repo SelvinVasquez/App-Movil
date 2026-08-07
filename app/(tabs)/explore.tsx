@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -7,11 +8,17 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import type { Pelicula } from '@/constants/movies';
 import { useMovies } from '@/contexts/MoviesContext';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export default function ExploreScreen() {
   const router = useRouter();
   const { peliculas } = useMovies();
   const [busqueda, setBusqueda] = useState('');
+
+  const textColor = useThemeColor({}, 'text');
+  const iconColor = useThemeColor({}, 'icon');
+  const cardBackground = useThemeColor({}, 'card');
+  const borderColor = useThemeColor({}, 'border');
 
   const resultados = peliculas.filter((p) =>
     p.titulo.toLowerCase().includes(busqueda.toLowerCase())
@@ -19,35 +26,57 @@ export default function ExploreScreen() {
 
   const renderItem = ({ item }: { item: Pelicula }) => (
     <Pressable
-      style={styles.card}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: cardBackground, borderColor },
+        pressed && styles.cardPressed,
+      ]}
       onPress={() => router.push(`/pelicula/${item.id}`)}>
       <Image source={{ uri: item.poster }} style={styles.poster} contentFit="cover" />
       <View style={styles.info}>
-        <ThemedText type="defaultSemiBold">{item.titulo}</ThemedText>
-        <ThemedText>{item.año} · {item.genero}</ThemedText>
+        <ThemedText type="defaultSemiBold" numberOfLines={2}>
+          {item.titulo}
+        </ThemedText>
+        <ThemedText style={styles.metaText}>
+          {item.año} · {item.genero}
+        </ThemedText>
       </View>
     </Pressable>
   );
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.header}>Buscar 🔎</ThemedText>
+      <ThemedText type="title" style={styles.header}>
+        Buscar 🔎
+      </ThemedText>
 
-      <TextInput
-        style={styles.buscador}
-        placeholder="Buscar por título..."
-        placeholderTextColor="#888"
-        value={busqueda}
-        onChangeText={setBusqueda}
-      />
+      <View style={[styles.buscadorWrapper, { backgroundColor: cardBackground, borderColor }]}>
+        <Ionicons name="search" size={18} color={iconColor} />
+        <TextInput
+          style={[styles.buscador, { color: textColor }]}
+          placeholder="Buscar por título..."
+          placeholderTextColor={iconColor}
+          value={busqueda}
+          onChangeText={setBusqueda}
+        />
+        {busqueda.length > 0 && (
+          <Pressable onPress={() => setBusqueda('')} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={iconColor} />
+          </Pressable>
+        )}
+      </View>
 
       <FlatList
         data={resultados}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <ThemedText style={styles.vacio}>No se encontraron películas.</ThemedText>
+          <View style={styles.vacioWrapper}>
+            <Ionicons name="film-outline" size={40} color={iconColor} />
+            <ThemedText style={styles.vacio}>No se encontraron películas.</ThemedText>
+          </View>
         }
       />
     </ThemedView>
@@ -56,25 +85,31 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 60 },
-  header: { paddingHorizontal: 16, marginBottom: 12 },
-  buscador: {
-    marginHorizontal: 16,
-    marginBottom: 12,
+  header: { paddingHorizontal: 20, marginBottom: 16 },
+  buscadorWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#888',
-    borderRadius: 8,
-    padding: 12,
-    color: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  list: { paddingHorizontal: 16, gap: 12 },
+  buscador: { flex: 1, fontSize: 16 },
+  list: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
   card: {
     flexDirection: 'row',
     gap: 12,
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: 'rgba(128,128,128,0.1)',
+    padding: 10,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  poster: { width: 60, height: 85, borderRadius: 8 },
-  info: { flex: 1, justifyContent: 'center', gap: 4 },
-  vacio: { textAlign: 'center', marginTop: 40, opacity: 0.6 },
+  cardPressed: { opacity: 0.7 },
+  poster: { width: 64, height: 92, borderRadius: 10 },
+  info: { flex: 1, justifyContent: 'center', gap: 6 },
+  metaText: { opacity: 0.6, fontSize: 14 },
+  vacioWrapper: { alignItems: 'center', marginTop: 60, gap: 10 },
+  vacio: { opacity: 0.6 },
 });
