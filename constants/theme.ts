@@ -1,34 +1,60 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Paleta "cine oscuro premium": fondo carbón, tarjetas con superficie elevada
+ * y un único acento dorado-ámbar para calificaciones y llamadas a la acción.
  */
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#B8860B';
+const tintColorDark = '#E8B84B';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#14171A',
+    background: '#F7F5F1',
+    surface: '#FFFFFF',
+    surfaceElevated: '#FBFAF7',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    accent: tintColorLight,
+    icon: '#6B7076',
+    tabIconDefault: '#6B7076',
     tabIconSelected: tintColorLight,
-    card: '#f2f4f5',
-    border: '#e2e5e7',
+    border: '#E4E0D8',
+    danger: '#C4453D',
+    success: '#2E8B57',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#F5F6F7',
+    background: '#0B0D10',
+    surface: '#15181C',
+    surfaceElevated: '#1B1F24',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    accent: tintColorDark,
+    icon: '#9BA3AC',
+    tabIconDefault: '#9BA3AC',
     tabIconSelected: tintColorDark,
-    card: '#1c1f21',
-    border: '#2a2d2f',
+    border: '#23272C',
+    danger: '#E5484D',
+    success: '#3DCC7B',
   },
+};
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
+export const Radius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  full: 999,
 };
 
 export const Fonts = Platform.select({
@@ -54,5 +80,4 @@ export const Fonts = Platform.select({
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
-  
 });
