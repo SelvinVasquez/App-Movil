@@ -1,53 +1,79 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { Chip } from '@/components/chip';
+import { MovieCard } from '@/components/movie-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import type { Pelicula } from '@/constants/movies';
+import { Radius, Spacing } from '@/constants/theme';
 import { useMovies } from '@/contexts/MoviesContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
+type Orden = 'relevancia' | 'titulo' | 'año' | 'calificacion';
+
+const ORDENES: { key: Orden; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'relevancia', label: 'Relevancia', icon: 'sparkles-outline' },
+  { key: 'titulo', label: 'Título A-Z', icon: 'text-outline' },
+  { key: 'año', label: 'Más recientes', icon: 'calendar-outline' },
+  { key: 'calificacion', label: 'Mejor valoradas', icon: 'star-outline' },
+];
+
 export default function ExploreScreen() {
   const router = useRouter();
-  const { peliculas } = useMovies();
+  const { peliculas, toggleFavorita } = useMovies();
   const [busqueda, setBusqueda] = useState('');
+  const [generoActivo, setGeneroActivo] = useState<string | null>(null);
+  const [orden, setOrden] = useState<Orden>('relevancia');
 
   const textColor = useThemeColor({}, 'text');
   const iconColor = useThemeColor({}, 'icon');
-  const cardBackground = useThemeColor({}, 'card');
+  const cardBackground = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
 
-  const resultados = peliculas.filter((p) =>
-    p.titulo.toLowerCase().includes(busqueda.toLowerCase())
+  const generos = useMemo(
+    () => Array.from(new Set(peliculas.map((p) => p.genero))).sort(),
+    [peliculas]
   );
 
+  const resultados = useMemo(() => {
+    let datos = peliculas.filter((p) => p.titulo.toLowerCase().includes(busqueda.toLowerCase()));
+
+    if (generoActivo) {
+      datos = datos.filter((p) => p.genero === generoActivo);
+    }
+
+    const ordenado = [...datos];
+    switch (orden) {
+      case 'titulo':
+        ordenado.sort((a, b) => a.titulo.localeCompare(b.titulo));
+        break;
+      case 'año':
+        ordenado.sort((a, b) => b.año - a.año);
+        break;
+      case 'calificacion':
+        ordenado.sort((a, b) => b.calificacion - a.calificacion);
+        break;
+      default:
+        break;
+    }
+    return ordenado;
+  }, [peliculas, busqueda, generoActivo, orden]);
+
   const renderItem = ({ item }: { item: Pelicula }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: cardBackground, borderColor },
-        pressed && styles.cardPressed,
-      ]}
-      onPress={() => router.push(`/pelicula/${item.id}`)}>
-      <Image source={{ uri: item.poster }} style={styles.poster} contentFit="cover" />
-      <View style={styles.info}>
-        <ThemedText type="defaultSemiBold" numberOfLines={2}>
-          {item.titulo}
-        </ThemedText>
-        <ThemedText style={styles.metaText}>
-          {item.año} · {item.genero}
-        </ThemedText>
-      </View>
-    </Pressable>
+    <MovieCard
+      pelicula={item}
+      onPress={() => router.push(`/pelicula/${item.id}`)}
+      onToggleFavorita={() => toggleFavorita(item.id)}
+    />
   );
 
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.header}>
-        Buscar 🔎
+        Explorar
       </ThemedText>
 
       <View style={[styles.buscadorWrapper, { backgroundColor: cardBackground, borderColor }]}>
@@ -66,6 +92,30 @@ export default function ExploreScreen() {
         )}
       </View>
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+        <Chip label="Todos los géneros" active={!generoActivo} onPress={() => setGeneroActivo(null)} />
+        {generos.map((genero) => (
+          <Chip
+            key={genero}
+            label={genero}
+            active={generoActivo === genero}
+            onPress={() => setGeneroActivo(generoActivo === genero ? null : genero)}
+          />
+        ))}
+      </ScrollView>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+        {ORDENES.map((item) => (
+          <Chip
+            key={item.key}
+            label={item.label}
+            icon={item.icon}
+            active={orden === item.key}
+            onPress={() => setOrden(item.key)}
+          />
+        ))}
+      </ScrollView>
+
       <FlatList
         data={resultados}
         keyExtractor={(item) => item.id}
@@ -75,7 +125,7 @@ export default function ExploreScreen() {
         ListEmptyComponent={
           <View style={styles.vacioWrapper}>
             <Ionicons name="film-outline" size={40} color={iconColor} />
-            <ThemedText style={styles.vacio}>No se encontraron películas.</ThemedText>
+            <ThemedText type="caption">No se encontraron películas.</ThemedText>
           </View>
         }
       />
@@ -85,31 +135,20 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 60 },
-  header: { paddingHorizontal: 20, marginBottom: 16 },
+  header: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg },
   buscadorWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 16,
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 10,
   },
   buscador: { flex: 1, fontSize: 16 },
-  list: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
-  card: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  cardPressed: { opacity: 0.7 },
-  poster: { width: 64, height: 92, borderRadius: 10 },
-  info: { flex: 1, justifyContent: 'center', gap: 6 },
-  metaText: { opacity: 0.6, fontSize: 14 },
+  chipsRow: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, paddingBottom: Spacing.sm },
+  list: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm, paddingBottom: 24, gap: Spacing.md },
   vacioWrapper: { alignItems: 'center', marginTop: 60, gap: 10 },
-  vacio: { opacity: 0.6 },
 });

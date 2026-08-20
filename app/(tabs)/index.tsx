@@ -1,71 +1,98 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 import { Link, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
-import { RatingBadge } from '@/components/rating-badge';
+import { Chip } from '@/components/chip';
+import { MovieCard } from '@/components/movie-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import type { Pelicula } from '@/constants/movies';
+import { Radius, Spacing } from '@/constants/theme';
 import { useMovies } from '@/contexts/MoviesContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
+type Filtro = 'todas' | 'favoritas' | 'pendientes' | 'vistas';
+
+const FILTROS: { key: Filtro; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'todas', label: 'Todas', icon: 'apps' },
+  { key: 'favoritas', label: 'Favoritas', icon: 'heart' },
+  { key: 'pendientes', label: 'Pendientes', icon: 'time-outline' },
+  { key: 'vistas', label: 'Vistas', icon: 'checkmark-circle' },
+];
+
 export default function HomeScreen() {
   const router = useRouter();
-  const { peliculas } = useMovies();
-  const cardBackground = useThemeColor({}, 'card');
-  const borderColor = useThemeColor({}, 'border');
+  const { peliculas, toggleFavorita } = useMovies();
+  const [filtro, setFiltro] = useState<Filtro>('todas');
+  const accent = useThemeColor({}, 'accent');
   const iconColor = useThemeColor({}, 'icon');
 
+  const lista = useMemo(() => {
+    switch (filtro) {
+      case 'favoritas':
+        return peliculas.filter((p) => p.favorita);
+      case 'pendientes':
+        return peliculas.filter((p) => !p.vista);
+      case 'vistas':
+        return peliculas.filter((p) => p.vista);
+      default:
+        return peliculas;
+    }
+  }, [peliculas, filtro]);
+
   const renderItem = ({ item }: { item: Pelicula }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: cardBackground, borderColor },
-        pressed && styles.cardPressed,
-      ]}
-      onPress={() => router.push(`/pelicula/${item.id}`)}>
-      <View style={styles.posterWrapper}>
-        <Image source={{ uri: item.poster }} style={styles.poster} contentFit="cover" />
-        <View style={styles.badgeOverlay}>
-          <RatingBadge calificacion={item.calificacion} />
-        </View>
-      </View>
-      <View style={styles.info}>
-        <ThemedText type="defaultSemiBold" numberOfLines={2}>
-          {item.titulo}
-        </ThemedText>
-        <View style={styles.metaRow}>
-          <ThemedText style={styles.metaText}>{item.año}</ThemedText>
-          <View style={[styles.dot, { backgroundColor: iconColor }]} />
-          <ThemedText style={styles.metaText}>{item.genero}</ThemedText>
-        </View>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={iconColor} />
-    </Pressable>
+    <MovieCard
+      pelicula={item}
+      onPress={() => router.push(`/pelicula/${item.id}`)}
+      onToggleFavorita={() => toggleFavorita(item.id)}
+    />
   );
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.headerRow}>
         <View>
-          <ThemedText type="title">Mis Favoritas 🎬</ThemedText>
-          <ThemedText style={styles.subtitle}>
+          <ThemedText type="title">Mi Biblioteca</ThemedText>
+          <ThemedText type="caption" style={styles.subtitle}>
             {peliculas.length} {peliculas.length === 1 ? 'título' : 'títulos'} guardados
           </ThemedText>
         </View>
         <Link href="/modal" asChild>
-          <Pressable style={styles.addButton}>
-            <Ionicons name="add" size={26} color="#fff" />
+          <Pressable style={StyleSheet.flatten([styles.addButton, { backgroundColor: accent }])}>
+            <Ionicons name="add" size={26} color="#151718" />
           </Pressable>
         </Link>
       </View>
+
       <FlatList
-        data={peliculas}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        data={FILTROS}
+        keyExtractor={(item) => item.key}
+        contentContainerStyle={styles.filtros}
+        renderItem={({ item }) => (
+          <Chip
+            label={item.label}
+            icon={item.icon}
+            active={filtro === item.key}
+            onPress={() => setFiltro(item.key)}
+          />
+        )}
+      />
+
+      <FlatList
+        data={lista}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.vacioWrapper}>
+            <Ionicons name="film-outline" size={40} color={iconColor} />
+            <ThemedText type="caption">No hay películas en esta categoría.</ThemedText>
+          </View>
+        }
       />
     </ThemedView>
   );
@@ -77,32 +104,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
-  subtitle: { opacity: 0.6, marginTop: 2 },
-  list: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  cardPressed: { opacity: 0.7 },
-  posterWrapper: { position: 'relative' },
-  poster: { width: 72, height: 104, borderRadius: 10 },
-  badgeOverlay: { position: 'absolute', bottom: 6, left: 6 },
-  info: { flex: 1, gap: 6 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { opacity: 0.6, fontSize: 14 },
-  dot: { width: 3, height: 3, borderRadius: 1.5 },
+  subtitle: { marginTop: 2 },
+  filtros: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, paddingBottom: Spacing.lg },
+  list: { paddingHorizontal: Spacing.xl, paddingBottom: 24, gap: Spacing.md },
+  vacioWrapper: { alignItems: 'center', marginTop: 60, gap: 10 },
   addButton: {
-    backgroundColor: '#0a7ea4',
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
