@@ -21,6 +21,7 @@ const MAPPING = {
   magnifyingglass: 'search',
   'chart.bar.fill': 'bar-chart',
   'gearshape.fill': 'settings',
+  'globe': 'public',
 } as IconMapping;
 
 /**

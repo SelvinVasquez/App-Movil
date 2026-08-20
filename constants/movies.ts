@@ -8,6 +8,7 @@ export interface Pelicula {
   favorita: boolean;
   vista: boolean;
   sinopsis?: string;
+  origenId?: string; // id externo si se importó desde una API, para evitar duplicados
 }
 
 export const peliculas: Pelicula[] = [

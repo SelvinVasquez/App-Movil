@@ -89,9 +89,9 @@ export default function AjustesScreen() {
         </View>
 
         <View style={[styles.avisoCard, { backgroundColor: cardBackground, borderColor }]}>
-          <Ionicons name="cloud-outline" size={20} color={accent} />
+          <Ionicons name="cloud-done-outline" size={20} color={accent} />
           <ThemedText type="caption" style={styles.avisoTexto}>
-            Próximamente: búsqueda de películas en línea con una API externa.
+            La pestaña &ldquo;Descubrir&rdquo; trae películas de la API pública de Studio Ghibli.
           </ThemedText>
         </View>
       </ScrollView>
