@@ -2,20 +2,26 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { RatingBadge } from '@/components/rating-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import type { Pelicula } from '@/constants/movies';
 import { Radius, Spacing } from '@/constants/theme';
 import { useMovies } from '@/contexts/MoviesContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { ApiError, obtenerPelicula } from '@/services/api';
 
 export default function DetallePelicula() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { peliculas, toggleFavorita, toggleVista, eliminarPelicula } = useMovies();
-  const pelicula = peliculas.find((p) => p.id === id);
+  const { toggleFavorita, toggleVista, eliminarPelicula } = useMovies();
+
+  const [pelicula, setPelicula] = useState<Pelicula | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const cardBackground = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
@@ -25,13 +31,61 @@ export default function DetallePelicula() {
   const iconColor = useThemeColor({}, 'icon');
   const background = useThemeColor({}, 'background');
 
-  if (!pelicula) {
+  const cargar = useCallback(async () => {
+    if (!id) return;
+    setCargando(true);
+    setError(null);
+    try {
+      const datos = await obtenerPelicula(id);
+      setPelicula(datos);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No se pudo cargar la película.');
+    } finally {
+      setCargando(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  if (cargando) {
     return (
-      <ThemedView style={styles.container}>
-        <ThemedText>No se encontró la película.</ThemedText>
+      <ThemedView style={[styles.container, styles.centro]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator color={accent} size="large" />
       </ThemedView>
     );
   }
+
+  if (error || !pelicula) {
+    return (
+      <ThemedView style={[styles.container, styles.centro]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Ionicons name="alert-circle-outline" size={40} color={danger} />
+        <ThemedText style={styles.errorTexto}>
+          {error ?? 'No se encontró la película.'}
+        </ThemedText>
+        <Pressable style={[styles.reintentar, { borderColor: accent }]} onPress={cargar}>
+          <Ionicons name="refresh" size={16} color={accent} />
+          <ThemedText style={{ color: accent, fontWeight: '600' }}>Reintentar</ThemedText>
+        </Pressable>
+        <Pressable onPress={() => router.back()}>
+          <ThemedText type="link">Volver</ThemedText>
+        </Pressable>
+      </ThemedView>
+    );
+  }
+
+  const onToggleFavorita = () => {
+    setPelicula({ ...pelicula, favorita: !pelicula.favorita });
+    toggleFavorita(pelicula.id);
+  };
+
+  const onToggleVista = () => {
+    setPelicula({ ...pelicula, vista: !pelicula.vista });
+    toggleVista(pelicula.id);
+  };
 
   const confirmarEliminar = () => {
     Alert.alert('Eliminar película', `¿Seguro que quieres eliminar "${pelicula.titulo}"?`, [
@@ -66,7 +120,7 @@ export default function DetallePelicula() {
           <View style={styles.topActions}>
             <Pressable
               style={[styles.iconButton, { backgroundColor: 'rgba(11,13,16,0.55)' }]}
-              onPress={() => toggleFavorita(pelicula.id)}>
+              onPress={onToggleFavorita}>
               <Ionicons
                 name={pelicula.favorita ? 'heart' : 'heart-outline'}
                 size={20}
@@ -103,7 +157,7 @@ export default function DetallePelicula() {
               { borderColor: pelicula.vista ? success : borderColor },
               pelicula.vista && { backgroundColor: success + '22' },
             ]}
-            onPress={() => toggleVista(pelicula.id)}>
+            onPress={onToggleVista}>
             <Ionicons
               name={pelicula.vista ? 'checkmark-circle' : 'checkmark-circle-outline'}
               size={18}
@@ -146,6 +200,17 @@ export default function DetallePelicula() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  centro: { alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.xl },
+  errorTexto: { textAlign: 'center' },
+  reintentar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
   scroll: { paddingBottom: 40 },
   posterWrapper: { position: 'relative' },
   poster: { width: '100%', height: 440 },
