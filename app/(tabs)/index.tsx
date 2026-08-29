@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { MovieCard } from '@/components/movie-card';
@@ -23,11 +23,10 @@ const FILTROS: { key: Filtro; label: string; icon: keyof typeof Ionicons.glyphMa
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { peliculas, cargando, error, refrescar, toggleFavorita } = useMovies();
+  const { peliculas, toggleFavorita } = useMovies();
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const accent = useThemeColor({}, 'accent');
   const iconColor = useThemeColor({}, 'icon');
-  const danger = useThemeColor({}, 'danger');
 
   const lista = useMemo(() => {
     switch (filtro) {
@@ -82,37 +81,19 @@ export default function HomeScreen() {
         )}
       />
 
-      {error && (
-        <Pressable style={[styles.errorBanner, { borderColor: danger }]} onPress={refrescar}>
-          <Ionicons name="alert-circle-outline" size={18} color={danger} />
-          <ThemedText style={[styles.errorTexto, { color: danger }]}>{error}</ThemedText>
-          <Ionicons name="refresh" size={16} color={danger} />
-        </Pressable>
-      )}
-
-      {cargando && peliculas.length === 0 ? (
-        <View style={styles.vacioWrapper}>
-          <ActivityIndicator color={accent} size="large" />
-          <ThemedText type="caption">Cargando películas...</ThemedText>
-        </View>
-      ) : (
-        <FlatList
-          data={lista}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={cargando} onRefresh={refrescar} tintColor={accent} />
-          }
-          ListEmptyComponent={
-            <View style={styles.vacioWrapper}>
-              <Ionicons name="film-outline" size={40} color={iconColor} />
-              <ThemedText type="caption">No hay películas en esta categoría.</ThemedText>
-            </View>
-          }
-        />
-      )}
+      <FlatList
+        data={lista}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.vacioWrapper}>
+            <Ionicons name="film-outline" size={40} color={iconColor} />
+            <ThemedText type="caption">No hay películas en esta categoría.</ThemedText>
+          </View>
+        }
+      />
     </ThemedView>
   );
 }
@@ -128,18 +109,6 @@ const styles = StyleSheet.create({
   },
   subtitle: { marginTop: 2 },
   filtros: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, paddingBottom: Spacing.lg },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginHorizontal: Spacing.xl,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  errorTexto: { flex: 1, fontSize: 13 },
   list: { paddingHorizontal: Spacing.xl, paddingBottom: 24, gap: Spacing.md },
   vacioWrapper: { alignItems: 'center', marginTop: 60, gap: 10 },
   addButton: {

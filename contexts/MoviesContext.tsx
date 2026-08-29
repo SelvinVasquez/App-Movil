@@ -1,118 +1,73 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Pelicula } from '@/constants/movies';
-import { useAuth } from '@/contexts/AuthContext';
-import { ApiError, crearPelicula, actualizarPelicula, eliminarPelicula as apiEliminarPelicula, obtenerPeliculas } from '@/services/api';
+import { peliculas as peliculasIniciales } from '@/constants/movies';
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
+
+const STORAGE_KEY = 'miprimerproyecto:peliculas';
 
 interface MoviesContextType {
   peliculas: Pelicula[];
   cargando: boolean;
-  error: string | null;
-  refrescar: () => Promise<void>;
-  agregarPelicula: (p: Omit<Pelicula, 'id' | 'favorita' | 'vista'>) => Promise<void>;
-  editarPelicula: (id: string, datos: Omit<Pelicula, 'id'>) => Promise<void>;
-  eliminarPelicula: (id: string) => Promise<void>;
-  toggleFavorita: (id: string) => Promise<void>;
-  toggleVista: (id: string) => Promise<void>;
+  agregarPelicula: (p: Omit<Pelicula, 'id' | 'favorita' | 'vista'>) => void;
+  editarPelicula: (id: string, datos: Omit<Pelicula, 'id'>) => void;
+  eliminarPelicula: (id: string) => void;
+  toggleFavorita: (id: string) => void;
+  toggleVista: (id: string) => void;
+  restablecerBiblioteca: () => void;
 }
 
 const MoviesContext = createContext<MoviesContextType | null>(null);
 
 export function MoviesProvider({ children }: { children: ReactNode }) {
-  const { token, cerrarSesion } = useAuth();
-  const [peliculas, setPeliculas] = useState<Pelicula[]>([]);
+  const [peliculas, setPeliculas] = useState<Pelicula[]>(peliculasIniciales);
   const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const manejarError = useCallback(
-    (e: unknown, mensajePorDefecto: string) => {
-      if (e instanceof ApiError) {
-        if (e.status === 401) {
-          setError('Tu sesión expiró. Inicia sesión de nuevo.');
-          cerrarSesion();
-          return;
-        }
-        setError(e.message);
-        return;
-      }
-      setError(mensajePorDefecto);
-    },
-    [cerrarSesion]
-  );
-
-  const refrescar = useCallback(async () => {
-    if (!token) {
-      setPeliculas([]);
-      setCargando(false);
-      return;
-    }
-    setCargando(true);
-    setError(null);
-    try {
-      const datos = await obtenerPeliculas();
-      setPeliculas(datos);
-    } catch (e) {
-      manejarError(e, 'No se pudieron cargar las películas.');
-    } finally {
-      setCargando(false);
-    }
-  }, [token, manejarError]);
+  const hidratado = useRef(false);
 
   useEffect(() => {
-    refrescar();
-  }, [refrescar]);
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((guardadas) => {
+        if (guardadas) {
+          setPeliculas(JSON.parse(guardadas));
+        }
+      })
+      .finally(() => {
+        hidratado.current = true;
+        setCargando(false);
+      });
+  }, []);
 
-  const agregarPelicula: MoviesContextType['agregarPelicula'] = async (nueva) => {
-    try {
-      const creada = await crearPelicula({ ...nueva, favorita: false, vista: false });
-      setPeliculas((actuales) => [...actuales, creada]);
-    } catch (e) {
-      manejarError(e, 'No se pudo agregar la película.');
-    }
+  useEffect(() => {
+    if (!hidratado.current) return;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(peliculas));
+  }, [peliculas]);
+
+  const agregarPelicula: MoviesContextType['agregarPelicula'] = (nueva) => {
+    setPeliculas((actuales) => [
+      ...actuales,
+      { ...nueva, id: String(Date.now()), favorita: false, vista: false },
+    ]);
   };
 
-  const editarPelicula: MoviesContextType['editarPelicula'] = async (id, datos) => {
-    try {
-      const actualizada = await actualizarPelicula(id, datos);
-      setPeliculas((actuales) => actuales.map((p) => (p.id === id ? actualizada : p)));
-    } catch (e) {
-      manejarError(e, 'No se pudo editar la película.');
-    }
+  const editarPelicula: MoviesContextType['editarPelicula'] = (id, datos) => {
+    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? { ...p, ...datos, id } : p)));
   };
 
-  const eliminarPelicula = async (id: string) => {
-    try {
-      await apiEliminarPelicula(id);
-      setPeliculas((actuales) => actuales.filter((p) => p.id !== id));
-    } catch (e) {
-      manejarError(e, 'No se pudo eliminar la película.');
-    }
+  const eliminarPelicula = (id: string) => {
+    setPeliculas((actuales) => actuales.filter((p) => p.id !== id));
   };
 
-  const toggleFavorita = async (id: string) => {
-    const pelicula = peliculas.find((p) => p.id === id);
-    if (!pelicula) return;
-    const favorita = !pelicula.favorita;
-    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? { ...p, favorita } : p)));
-    try {
-      await actualizarPelicula(id, { ...pelicula, favorita });
-    } catch (e) {
-      setPeliculas((actuales) => actuales.map((p) => (p.id === id ? pelicula : p)));
-      manejarError(e, 'No se pudo actualizar la película.');
-    }
+  const toggleFavorita = (id: string) => {
+    setPeliculas((actuales) =>
+      actuales.map((p) => (p.id === id ? { ...p, favorita: !p.favorita } : p))
+    );
   };
 
-  const toggleVista = async (id: string) => {
-    const pelicula = peliculas.find((p) => p.id === id);
-    if (!pelicula) return;
-    const vista = !pelicula.vista;
-    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? { ...p, vista } : p)));
-    try {
-      await actualizarPelicula(id, { ...pelicula, vista });
-    } catch (e) {
-      setPeliculas((actuales) => actuales.map((p) => (p.id === id ? pelicula : p)));
-      manejarError(e, 'No se pudo actualizar la película.');
-    }
+  const toggleVista = (id: string) => {
+    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? { ...p, vista: !p.vista } : p)));
+  };
+
+  const restablecerBiblioteca = () => {
+    setPeliculas(peliculasIniciales);
   };
 
   return (
@@ -120,13 +75,12 @@ export function MoviesProvider({ children }: { children: ReactNode }) {
       value={{
         peliculas,
         cargando,
-        error,
-        refrescar,
         agregarPelicula,
         editarPelicula,
         eliminarPelicula,
         toggleFavorita,
         toggleVista,
+        restablecerBiblioteca,
       }}>
       {children}
     </MoviesContext.Provider>

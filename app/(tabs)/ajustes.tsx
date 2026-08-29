@@ -6,7 +6,7 @@ import { Chip } from '@/components/chip';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
+import { useMovies } from '@/contexts/MoviesContext';
 import { TemaPreferencia, useAppTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -18,17 +18,21 @@ const OPCIONES_TEMA: { key: TemaPreferencia; label: string; icon: keyof typeof I
 
 export default function AjustesScreen() {
   const { preferencia, setPreferencia } = useAppTheme();
-  const { cerrarSesion } = useAuth();
+  const { restablecerBiblioteca } = useMovies();
   const cardBackground = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
   const danger = useThemeColor({}, 'danger');
   const accent = useThemeColor({}, 'accent');
 
-  const confirmarCerrarSesion = () => {
-    Alert.alert('Cerrar sesión', '¿Seguro que quieres cerrar sesión?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar sesión', style: 'destructive', onPress: cerrarSesion },
-    ]);
+  const confirmarRestablecer = () => {
+    Alert.alert(
+      'Restablecer biblioteca',
+      'Esto eliminará las películas que hayas agregado o modificado y volverá a la lista original. ¿Continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Restablecer', style: 'destructive', onPress: restablecerBiblioteca },
+      ]
+    );
   };
 
   return (
@@ -54,16 +58,16 @@ export default function AjustesScreen() {
         </View>
 
         <ThemedText type="subtitle" style={styles.seccion}>
-          Cuenta
+          Datos
         </ThemedText>
         <Pressable
           style={[styles.fila, { backgroundColor: cardBackground, borderColor }]}
-          onPress={confirmarCerrarSesion}>
+          onPress={confirmarRestablecer}>
           <View style={styles.filaTexto}>
-            <Ionicons name="log-out-outline" size={20} color={danger} />
+            <Ionicons name="refresh-outline" size={20} color={danger} />
             <View>
-              <ThemedText type="defaultSemiBold">Cerrar sesión</ThemedText>
-              <ThemedText type="caption">Borra el token guardado en este dispositivo</ThemedText>
+              <ThemedText type="defaultSemiBold">Restablecer biblioteca</ThemedText>
+              <ThemedText type="caption">Vuelve a la lista original de películas</ThemedText>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={18} color={danger} />
