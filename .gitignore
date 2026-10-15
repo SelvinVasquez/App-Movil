@@ -43,3 +43,7 @@ app-example
 /android
 .claude/
 CLAUDE.md
+# variables de entorno con claves y salida de compilacion web
+.env
+/dist
+/dist-web
