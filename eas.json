@@ -1,0 +1,31 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://cineteca-api-12771576319.us-central1.run.app/api",
+        "EXPO_PUBLIC_TMDB_KEY": "e2f1bd23edf12e72d81a66f5b20e5846"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://cineteca-api-12771576319.us-central1.run.app/api",
+        "EXPO_PUBLIC_TMDB_KEY": "e2f1bd23edf12e72d81a66f5b20e5846"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
