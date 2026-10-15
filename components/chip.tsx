@@ -1,5 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+
+import { AnimatedPressable } from '@/components/animated-pressable';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -23,7 +25,9 @@ export function Chip({
   const activeTextColor = '#151718';
 
   return (
-    <Pressable
+    <AnimatedPressable
+      haptic
+      scaleTo={0.92}
       onPress={onPress}
       style={[
         styles.chip,
@@ -43,7 +47,7 @@ export function Chip({
       <ThemedText style={[styles.label, { color: active ? activeTextColor : textColor }]}>
         {label}
       </ThemedText>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -52,10 +56,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 2,
+    paddingVertical: Spacing.sm,
+    alignSelf: 'flex-start',
     borderRadius: Radius.full,
     borderWidth: 1,
   },
   icon: { marginRight: 4 },
-  label: { fontSize: 13, fontWeight: '600' },
+  label: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
 });

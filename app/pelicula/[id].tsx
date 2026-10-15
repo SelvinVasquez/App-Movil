@@ -2,19 +2,26 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeInUp, ZoomIn } from 'react-native-reanimated';
+
+import { AnimatedPressable } from '@/components/animated-pressable';
+import { PopIcon } from '@/components/pop-icon';
 
 import { RatingBadge } from '@/components/rating-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useMovies } from '@/contexts/MoviesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { aviso, confirmar } from '@/services/avisos';
 
 export default function DetallePelicula() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { peliculas, toggleFavorita, toggleVista, eliminarPelicula } = useMovies();
+  const mostrarToast = useToast();
   const pelicula = peliculas.find((p) => p.id === id);
 
   const cardBackground = useThemeColor({}, 'surface');
@@ -34,17 +41,23 @@ export default function DetallePelicula() {
   }
 
   const confirmarEliminar = () => {
-    Alert.alert('Eliminar película', `¿Seguro que quieres eliminar "${pelicula.titulo}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: () => {
-          eliminarPelicula(pelicula.id);
-          router.back();
-        },
-      },
-    ]);
+    confirmar('Eliminar película', `¿Seguro que quieres eliminar "${pelicula.titulo}"?`, 'Eliminar', async () => {
+      try {
+        await eliminarPelicula(pelicula.id);
+        router.back();
+        mostrarToast('Película eliminada', 'info');
+      } catch {
+        aviso('Error', 'No se pudo eliminar la película.');
+      }
+    });
+  };
+
+  const manejarToggleFavorita = () => {
+    toggleFavorita(pelicula.id).catch(() => aviso('Error', 'No se pudo actualizar la película.'));
+  };
+
+  const manejarToggleVista = () => {
+    toggleVista(pelicula.id).catch(() => aviso('Error', 'No se pudo actualizar la película.'));
   };
 
   return (
@@ -52,7 +65,9 @@ export default function DetallePelicula() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.posterWrapper}>
-          <Image source={{ uri: pelicula.poster }} style={styles.poster} contentFit="cover" />
+          <Animated.View entering={FadeIn.duration(600)}>
+            <Image source={{ uri: pelicula.poster }} style={styles.poster} contentFit="cover" transition={400} />
+          </Animated.View>
           <LinearGradient
             colors={['transparent', background]}
             style={styles.gradient}
@@ -64,15 +79,16 @@ export default function DetallePelicula() {
           </Pressable>
 
           <View style={styles.topActions}>
-            <Pressable
+            <AnimatedPressable
+              haptic
               style={[styles.iconButton, { backgroundColor: 'rgba(11,13,16,0.55)' }]}
-              onPress={() => toggleFavorita(pelicula.id)}>
-              <Ionicons
+              onPress={manejarToggleFavorita}>
+              <PopIcon
                 name={pelicula.favorita ? 'heart' : 'heart-outline'}
                 size={20}
                 color={pelicula.favorita ? accent : '#F5F6F7'}
               />
-            </Pressable>
+            </AnimatedPressable>
             <Pressable
               style={[styles.iconButton, { backgroundColor: 'rgba(11,13,16,0.55)' }]}
               onPress={() => router.push(`/editar/${pelicula.id}`)}>
@@ -80,12 +96,12 @@ export default function DetallePelicula() {
             </Pressable>
           </View>
 
-          <View style={styles.badgeOverlay}>
+          <Animated.View entering={ZoomIn.delay(350).springify().damping(10)} style={styles.badgeOverlay}>
             <RatingBadge calificacion={pelicula.calificacion} size="large" />
-          </View>
+          </Animated.View>
         </View>
 
-        <View style={styles.content}>
+        <Animated.View entering={FadeInUp.delay(150).duration(500)} style={styles.content}>
           <ThemedText type="title">{pelicula.titulo}</ThemedText>
 
           <View style={styles.metaRow}>
@@ -97,13 +113,14 @@ export default function DetallePelicula() {
             </View>
           </View>
 
-          <Pressable
+          <AnimatedPressable
+            haptic
             style={[
               styles.vistaButton,
               { borderColor: pelicula.vista ? success : borderColor },
               pelicula.vista && { backgroundColor: success + '22' },
             ]}
-            onPress={() => toggleVista(pelicula.id)}>
+            onPress={manejarToggleVista}>
             <Ionicons
               name={pelicula.vista ? 'checkmark-circle' : 'checkmark-circle-outline'}
               size={18}
@@ -112,7 +129,7 @@ export default function DetallePelicula() {
             <ThemedText style={{ color: pelicula.vista ? success : iconColor, fontWeight: '600' }}>
               {pelicula.vista ? 'Vista' : 'Marcar como vista'}
             </ThemedText>
-          </Pressable>
+          </AnimatedPressable>
 
           <View style={[styles.divider, { backgroundColor: borderColor }]} />
 
@@ -132,13 +149,13 @@ export default function DetallePelicula() {
               : 'Aún sin calificar'}
           </ThemedText>
 
-          <Pressable
+          <AnimatedPressable
             style={[styles.eliminarButton, { borderColor: danger }]}
             onPress={confirmarEliminar}>
             <Ionicons name="trash-outline" size={18} color={danger} />
             <ThemedText style={{ color: danger, fontWeight: '600' }}>Eliminar película</ThemedText>
-          </Pressable>
-        </View>
+          </AnimatedPressable>
+        </Animated.View>
       </ScrollView>
     </ThemedView>
   );

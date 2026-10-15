@@ -1,6 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, FadeOutLeft, LinearTransition } from 'react-native-reanimated';
+
+import { AnimatedPressable } from '@/components/animated-pressable';
+import { PopIcon } from '@/components/pop-icon';
 
 import { RatingBadge } from '@/components/rating-badge';
 import { ThemedText } from '@/components/themed-text';
@@ -12,7 +16,9 @@ export function MovieCard({
   pelicula,
   onPress,
   onToggleFavorita,
+  index = 0,
 }: {
+  index?: number;
   pelicula: Pelicula;
   onPress: () => void;
   onToggleFavorita?: () => void;
@@ -24,22 +30,25 @@ export function MovieCard({
   const success = useThemeColor({}, 'success');
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: cardBackground, borderColor },
-        pressed && styles.cardPressed,
-      ]}
-      onPress={onPress}>
+    <Animated.View
+      entering={FadeInDown.delay(Math.min(index, 8) * 60).springify().damping(16)}
+      exiting={FadeOutLeft.duration(250)}
+      layout={LinearTransition.springify().damping(18)}>
+      <AnimatedPressable
+        scaleTo={0.97}
+        style={[styles.card, { backgroundColor: cardBackground, borderColor }]}
+        onPress={onPress}>
       <View style={styles.posterWrapper}>
-        <Image source={{ uri: pelicula.poster }} style={styles.poster} contentFit="cover" />
+        <Image source={{ uri: pelicula.poster }} style={styles.poster} contentFit="cover" transition={400} />
         <View style={styles.badgeOverlay}>
           <RatingBadge calificacion={pelicula.calificacion} />
         </View>
         {pelicula.vista && (
-          <View style={[styles.vistaBadge, { backgroundColor: success }]}>
+          <Animated.View
+            entering={FadeInDown.springify()}
+            style={[styles.vistaBadge, { backgroundColor: success }]}>
             <Ionicons name="checkmark" size={12} color="#0B0D10" />
-          </View>
+          </Animated.View>
         )}
       </View>
 
@@ -58,14 +67,15 @@ export function MovieCard({
 
       {onToggleFavorita && (
         <Pressable hitSlop={10} onPress={onToggleFavorita} style={styles.favButton}>
-          <Ionicons
+          <PopIcon
             name={pelicula.favorita ? 'heart' : 'heart-outline'}
             size={20}
             color={pelicula.favorita ? accent : iconColor}
           />
         </Pressable>
       )}
-    </Pressable>
+      </AnimatedPressable>
+    </Animated.View>
   );
 }
 

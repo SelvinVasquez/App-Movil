@@ -1,7 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+
+import { AnimatedPressable } from '@/components/animated-pressable';
 
 import { Chip } from '@/components/chip';
 import { MovieCard } from '@/components/movie-card';
@@ -11,6 +14,7 @@ import type { Pelicula } from '@/constants/movies';
 import { Radius, Spacing } from '@/constants/theme';
 import { useMovies } from '@/contexts/MoviesContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { aviso } from '@/services/avisos';
 
 type Filtro = 'todas' | 'favoritas' | 'pendientes' | 'vistas';
 
@@ -23,10 +27,14 @@ const FILTROS: { key: Filtro; label: string; icon: keyof typeof Ionicons.glyphMa
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { peliculas, toggleFavorita } = useMovies();
+  const { peliculas, cargando, error, recargar, toggleFavorita } = useMovies();
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const accent = useThemeColor({}, 'accent');
   const iconColor = useThemeColor({}, 'icon');
+
+  const manejarToggleFavorita = (id: string) => {
+    toggleFavorita(id).catch(() => aviso('Error', 'No se pudo actualizar la película.'));
+  };
 
   const lista = useMemo(() => {
     switch (filtro) {
@@ -41,29 +49,32 @@ export default function HomeScreen() {
     }
   }, [peliculas, filtro]);
 
-  const renderItem = ({ item }: { item: Pelicula }) => (
+  const renderItem = ({ item, index }: { item: Pelicula; index: number }) => (
     <MovieCard
+      index={index}
       pelicula={item}
       onPress={() => router.push(`/pelicula/${item.id}`)}
-      onToggleFavorita={() => toggleFavorita(item.id)}
+      onToggleFavorita={() => manejarToggleFavorita(item.id)}
     />
   );
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.headerRow}>
+      <Animated.View entering={FadeInDown.duration(500)} style={styles.headerRow}>
         <View>
           <ThemedText type="title">Mi Biblioteca</ThemedText>
           <ThemedText type="caption" style={styles.subtitle}>
             {peliculas.length} {peliculas.length === 1 ? 'título' : 'títulos'} guardados
           </ThemedText>
         </View>
-        <Link href="/modal" asChild>
-          <Pressable style={StyleSheet.flatten([styles.addButton, { backgroundColor: accent }])}>
-            <Ionicons name="add" size={26} color="#151718" />
-          </Pressable>
-        </Link>
-      </View>
+        <AnimatedPressable
+          haptic
+          accessibilityLabel="Agregar película"
+          onPress={() => router.push('/modal')}
+          style={[styles.addButton, { backgroundColor: accent }]}>
+          <Ionicons name="add" size={26} color="#151718" />
+        </AnimatedPressable>
+      </Animated.View>
 
       <FlatList
         horizontal
@@ -81,19 +92,34 @@ export default function HomeScreen() {
         )}
       />
 
-      <FlatList
-        data={lista}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.vacioWrapper}>
-            <Ionicons name="film-outline" size={40} color={iconColor} />
-            <ThemedText type="caption">No hay películas en esta categoría.</ThemedText>
-          </View>
-        }
-      />
+      {cargando && peliculas.length === 0 ? (
+        <View style={styles.vacioWrapper}>
+          <ActivityIndicator color={accent} size="large" />
+          <ThemedText type="caption">Cargando tu biblioteca...</ThemedText>
+        </View>
+      ) : error ? (
+        <View style={styles.vacioWrapper}>
+          <Ionicons name="cloud-offline-outline" size={40} color={iconColor} />
+          <ThemedText type="caption" style={{ textAlign: 'center', paddingHorizontal: Spacing.xl }}>
+            {error}
+          </ThemedText>
+        </View>
+      ) : (
+        <FlatList
+          data={lista}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} tintColor={accent} />}
+          ListEmptyComponent={
+            <Animated.View entering={FadeIn.duration(400)} style={styles.vacioWrapper}>
+              <Ionicons name="film-outline" size={40} color={iconColor} />
+              <ThemedText type="caption">No hay películas en esta categoría.</ThemedText>
+            </Animated.View>
+          }
+        />
+      )}
     </ThemedView>
   );
 }
@@ -108,9 +134,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   subtitle: { marginTop: 2 },
+  // En nativo, una FlatList horizontal se estira en vertical dentro de un contenedor flex; flexGrow 0 la limita a su contenido.
+  filtrosLista: { flexGrow: 0, flexShrink: 0 },
   filtros: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, paddingBottom: Spacing.lg },
-  list: { paddingHorizontal: Spacing.xl, paddingBottom: 24, gap: Spacing.md },
-  vacioWrapper: { alignItems: 'center', marginTop: 60, gap: 10 },
+  // La lista ocupa el resto de la pantalla y arranca arriba, sin centrar el contenido.
+  listaVertical: { flex: 1, alignSelf: 'stretch' },
+  list: { justifyContent: 'flex-start', paddingHorizontal: Spacing.xl, paddingBottom: 24, gap: Spacing.md },
+  vacioWrapper: { alignItems: 'center', alignSelf: 'stretch', marginTop: 60, gap: 10 },
   addButton: {
     width: 44,
     height: 44,

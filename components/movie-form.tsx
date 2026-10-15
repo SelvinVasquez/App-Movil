@@ -1,12 +1,17 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
+
+import { AnimatedPressable } from '@/components/animated-pressable';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
+import { ApiError } from '@/services/api';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { aviso } from '@/services/avisos';
 
 export interface MovieFormValues {
   titulo: string;
@@ -44,13 +49,14 @@ export function MovieForm({
   subtitulo: string;
   valoresIniciales?: Partial<MovieFormValues>;
   etiquetaBoton: string;
-  onSubmit: (valores: MovieFormValues) => void;
+  onSubmit: (valores: MovieFormValues) => Promise<void>;
 }) {
   const [titulo, setTitulo] = useState(valoresIniciales?.titulo ?? '');
   const [año, setAño] = useState(valoresIniciales?.año ? String(valoresIniciales.año) : '');
   const [genero, setGenero] = useState(valoresIniciales?.genero ?? '');
   const [poster, setPoster] = useState(valoresIniciales?.poster ?? '');
   const [sinopsis, setSinopsis] = useState(valoresIniciales?.sinopsis ?? '');
+  const [enviando, setEnviando] = useState(false);
 
   const textColor = useThemeColor({}, 'text');
   const iconColor = useThemeColor({}, 'icon');
@@ -69,12 +75,19 @@ export function MovieForm({
 
   const formCompleto = Boolean(titulo && año && genero && poster);
 
-  const confirmar = () => {
+  const confirmar = async () => {
     if (!formCompleto) {
-      Alert.alert('Faltan datos', 'Completa título, año, género y poster antes de guardar.');
+      aviso('Faltan datos', 'Completa título, año, género y poster antes de guardar.');
       return;
     }
-    onSubmit({ titulo, año: Number(año), genero, poster, sinopsis });
+    setEnviando(true);
+    try {
+      await onSubmit({ titulo, año: Number(año), genero, poster, sinopsis });
+    } catch (e) {
+      aviso('Error', e instanceof ApiError ? e.message : 'No se pudo guardar la película.');
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -88,7 +101,7 @@ export function MovieForm({
         </ThemedText>
 
         {poster.length > 0 ? (
-          <Image source={{ uri: poster }} style={styles.preview} contentFit="cover" />
+          <Image source={{ uri: poster }} style={styles.preview} contentFit="cover" transition={300} />
         ) : (
           <View style={[styles.previewPlaceholder, { backgroundColor: cardBackground, borderColor }]}>
             <Ionicons name="image-outline" size={32} color={iconColor} />
@@ -96,8 +109,11 @@ export function MovieForm({
           </View>
         )}
 
-        {CAMPOS.map((campo) => (
-          <View key={campo.key} style={styles.fieldGroup}>
+        {CAMPOS.map((campo, i) => (
+          <Animated.View
+            key={campo.key}
+            entering={FadeInDown.delay(80 + i * 60).springify().damping(16)}
+            style={styles.fieldGroup}>
             <ThemedText style={styles.label}>{campo.label}</ThemedText>
             <View
               style={[
@@ -123,16 +139,29 @@ export function MovieForm({
                 textAlignVertical={campo.multiline ? 'top' : 'center'}
               />
             </View>
-          </View>
+          </Animated.View>
         ))}
 
-        <Pressable
-          style={[styles.boton, { backgroundColor: accent }, !formCompleto && styles.botonDeshabilitado]}
+        <AnimatedPressable
+          haptic
+          style={[
+            styles.boton,
+            { backgroundColor: accent },
+            (!formCompleto || enviando) && styles.botonDeshabilitado,
+          ]}
           onPress={confirmar}
-          disabled={!formCompleto}>
-          <Ionicons name="checkmark-circle" size={20} color="#151718" />
-          <ThemedText style={styles.botonTexto}>{etiquetaBoton}</ThemedText>
-        </Pressable>
+          disabled={!formCompleto || enviando}>
+          {enviando ? (
+            <ActivityIndicator color="#151718" />
+          ) : (
+            <>
+              <Animated.View entering={ZoomIn.springify().damping(8)}>
+                <Ionicons name="checkmark-circle" size={20} color="#151718" />
+              </Animated.View>
+              <ThemedText style={styles.botonTexto}>{etiquetaBoton}</ThemedText>
+            </>
+          )}
+        </AnimatedPressable>
       </ScrollView>
     </ThemedView>
   );
