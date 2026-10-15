@@ -1,19 +1,24 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
+
+import { AnimatedPressable } from '@/components/animated-pressable';
 
 import { RatingBadge } from '@/components/rating-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
-import type { GhibliFilm } from '@/services/ghibliApi';
+import { posterUrl, type TmdbPelicula } from '@/services/tmdbApi';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 export function DiscoverCard({
   film,
   enBiblioteca,
   onImportar,
+  index = 0,
 }: {
-  film: GhibliFilm;
+  index?: number;
+  film: TmdbPelicula;
   enBiblioteca: boolean;
   onImportar: () => void;
 }) {
@@ -23,11 +28,13 @@ export function DiscoverCard({
   const success = useThemeColor({}, 'success');
 
   return (
-    <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
+    <Animated.View
+      entering={FadeInDown.delay(Math.min(index, 8) * 50).springify().damping(16)}
+      style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
       <View style={styles.posterWrapper}>
-        <Image source={{ uri: film.image }} style={styles.poster} contentFit="cover" />
+        <Image source={{ uri: posterUrl(film.poster_path) }} style={styles.poster} contentFit="cover" transition={400} />
         <View style={styles.badgeOverlay}>
-          <RatingBadge calificacion={Number(film.rt_score) / 10} />
+          <RatingBadge calificacion={Math.round(film.vote_average * 10) / 10} />
         </View>
       </View>
 
@@ -35,10 +42,11 @@ export function DiscoverCard({
         <ThemedText type="defaultSemiBold" numberOfLines={2}>
           {film.title}
         </ThemedText>
-        <ThemedText type="caption">{film.release_date} · Animación</ThemedText>
+        <ThemedText type="caption">{film.release_date?.slice(0, 4) || 's/f'}</ThemedText>
       </View>
 
-      <Pressable
+      <AnimatedPressable
+        haptic
         hitSlop={10}
         disabled={enBiblioteca}
         onPress={onImportar}
@@ -47,13 +55,15 @@ export function DiscoverCard({
           styles.boton,
           { backgroundColor: enBiblioteca ? success + '22' : accent },
         ]}>
-        <Ionicons
-          name={enBiblioteca ? 'checkmark' : 'add'}
-          size={20}
-          color={enBiblioteca ? success : '#151718'}
-        />
-      </Pressable>
-    </View>
+        <Animated.View key={enBiblioteca ? 'ok' : 'add'} entering={ZoomIn.springify().damping(8)}>
+          <Ionicons
+            name={enBiblioteca ? 'checkmark' : 'add'}
+            size={20}
+            color={enBiblioteca ? success : '#151718'}
+          />
+        </Animated.View>
+      </AnimatedPressable>
+    </Animated.View>
   );
 }
 
