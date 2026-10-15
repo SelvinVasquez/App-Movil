@@ -1,73 +1,91 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Pelicula } from '@/constants/movies';
-import { peliculas as peliculasIniciales } from '@/constants/movies';
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'miprimerproyecto:peliculas';
+import { useAuth } from '@/contexts/AuthContext';
+import * as api from '@/services/api';
 
 interface MoviesContextType {
   peliculas: Pelicula[];
   cargando: boolean;
-  agregarPelicula: (p: Omit<Pelicula, 'id' | 'favorita' | 'vista'>) => void;
-  editarPelicula: (id: string, datos: Omit<Pelicula, 'id'>) => void;
-  eliminarPelicula: (id: string) => void;
-  toggleFavorita: (id: string) => void;
-  toggleVista: (id: string) => void;
-  restablecerBiblioteca: () => void;
+  error: string | null;
+  recargar: () => Promise<void>;
+  agregarPelicula: (p: Omit<Pelicula, 'id' | 'favorita' | 'vista'>) => Promise<void>;
+  editarPelicula: (id: string, datos: Omit<Pelicula, 'id'>) => Promise<void>;
+  eliminarPelicula: (id: string) => Promise<void>;
+  toggleFavorita: (id: string) => Promise<void>;
+  toggleVista: (id: string) => Promise<void>;
 }
 
 const MoviesContext = createContext<MoviesContextType | null>(null);
 
 export function MoviesProvider({ children }: { children: ReactNode }) {
-  const [peliculas, setPeliculas] = useState<Pelicula[]>(peliculasIniciales);
+  const { usuario } = useAuth();
+  const [peliculas, setPeliculas] = useState<Pelicula[]>([]);
   const [cargando, setCargando] = useState(true);
-  const hidratado = useRef(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((guardadas) => {
-        if (guardadas) {
-          setPeliculas(JSON.parse(guardadas));
-        }
-      })
-      .finally(() => {
-        hidratado.current = true;
-        setCargando(false);
-      });
+  const recargar = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+    try {
+      setPeliculas(await api.obtenerPeliculas());
+    } catch (e) {
+      setError(e instanceof api.ApiError ? e.message : 'No se pudieron cargar las películas.');
+    } finally {
+      setCargando(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (!hidratado.current) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(peliculas));
-  }, [peliculas]);
+    if (usuario) {
+      recargar();
+    } else {
+      setPeliculas([]);
+    }
+  }, [usuario, recargar]);
 
-  const agregarPelicula: MoviesContextType['agregarPelicula'] = (nueva) => {
-    setPeliculas((actuales) => [
-      ...actuales,
-      { ...nueva, id: String(Date.now()), favorita: false, vista: false },
-    ]);
+  // Misma regla que el backend: mismo título (sin distinguir mayúsculas) y año.
+  const existeDuplicada = (titulo: string, año: number, ignorarId?: string) =>
+    peliculas.some(
+      (p) =>
+        p.id !== ignorarId &&
+        p.año === año &&
+        p.titulo.trim().toLowerCase() === titulo.trim().toLowerCase()
+    );
+
+  const agregarPelicula: MoviesContextType['agregarPelicula'] = async (nueva) => {
+    if (existeDuplicada(nueva.titulo, nueva.año)) {
+      throw new api.ApiError(422, 'Esta película ya está en tu lista.');
+    }
+    const creada = await api.crearPelicula({ ...nueva, favorita: false, vista: false });
+    setPeliculas((actuales) => [...actuales, creada]);
   };
 
-  const editarPelicula: MoviesContextType['editarPelicula'] = (id, datos) => {
-    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? { ...p, ...datos, id } : p)));
+  const editarPelicula: MoviesContextType['editarPelicula'] = async (id, datos) => {
+    if (existeDuplicada(datos.titulo, datos.año, id)) {
+      throw new api.ApiError(422, 'Esta película ya está en tu lista.');
+    }
+    const actualizada = await api.actualizarPelicula(id, datos);
+    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? actualizada : p)));
   };
 
-  const eliminarPelicula = (id: string) => {
+  const eliminarPelicula = async (id: string) => {
+    await api.eliminarPelicula(id);
     setPeliculas((actuales) => actuales.filter((p) => p.id !== id));
   };
 
-  const toggleFavorita = (id: string) => {
-    setPeliculas((actuales) =>
-      actuales.map((p) => (p.id === id ? { ...p, favorita: !p.favorita } : p))
-    );
+  const toggleFavorita = async (id: string) => {
+    const pelicula = peliculas.find((p) => p.id === id);
+    if (!pelicula) return;
+    const actualizada = await api.actualizarPelicula(id, { favorita: !pelicula.favorita });
+    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? actualizada : p)));
   };
 
-  const toggleVista = (id: string) => {
-    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? { ...p, vista: !p.vista } : p)));
-  };
-
-  const restablecerBiblioteca = () => {
-    setPeliculas(peliculasIniciales);
+  const toggleVista = async (id: string) => {
+    const pelicula = peliculas.find((p) => p.id === id);
+    if (!pelicula) return;
+    const actualizada = await api.actualizarPelicula(id, { vista: !pelicula.vista });
+    setPeliculas((actuales) => actuales.map((p) => (p.id === id ? actualizada : p)));
   };
 
   return (
@@ -75,12 +93,13 @@ export function MoviesProvider({ children }: { children: ReactNode }) {
       value={{
         peliculas,
         cargando,
+        error,
+        recargar,
         agregarPelicula,
         editarPelicula,
         eliminarPelicula,
         toggleFavorita,
         toggleVista,
-        restablecerBiblioteca,
       }}>
       {children}
     </MoviesContext.Provider>
