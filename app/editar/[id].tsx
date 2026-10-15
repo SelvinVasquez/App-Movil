@@ -4,10 +4,12 @@ import { MovieForm, MovieFormValues } from '@/components/movie-form';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useMovies } from '@/contexts/MoviesContext';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function EditarModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { peliculas, editarPelicula } = useMovies();
+  const mostrarToast = useToast();
   const pelicula = peliculas.find((p) => p.id === id);
 
   if (!pelicula) {
@@ -18,14 +20,15 @@ export default function EditarModal() {
     );
   }
 
-  const guardar = (valores: MovieFormValues) => {
-    editarPelicula(pelicula.id, {
+  const guardar = async (valores: MovieFormValues) => {
+    await editarPelicula(pelicula.id, {
       ...valores,
       calificacion: pelicula.calificacion,
       favorita: pelicula.favorita,
       vista: pelicula.vista,
     });
     router.back();
+    mostrarToast('Cambios guardados');
   };
 
   return (
