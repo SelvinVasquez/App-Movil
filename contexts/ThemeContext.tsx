@@ -31,7 +31,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEY, p);
   };
 
-  const colorScheme = preferencia === 'system' ? sistema ?? 'light' : preferencia;
+  const colorScheme = preferencia === 'system' ? (sistema === 'dark' ? 'dark' : 'light') : preferencia;
 
   return (
     <ThemeContext.Provider value={{ preferencia, colorScheme, setPreferencia }}>
