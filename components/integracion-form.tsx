@@ -12,7 +12,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/contexts/ToastContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { aviso } from '@/services/avisos';
-import { crear } from '@/services/integraciones';
+import { crear, verificar } from '@/services/integraciones';
 
 /** Formulario de registro para una API de un compañero, generado desde su configuración. */
 export function IntegracionForm({ integracion }: { integracion: Integracion }) {
@@ -22,6 +22,8 @@ export function IntegracionForm({ integracion }: { integracion: Integracion }) {
     Object.fromEntries(integracion.campos.map((c) => [c.key, c.valorInicial ?? '']))
   );
   const [enviando, setEnviando] = useState(false);
+  const [esperandoCodigo, setEsperandoCodigo] = useState(false);
+  const [codigo, setCodigo] = useState('');
 
   const accent = useThemeColor({}, 'accent');
   const surface = useThemeColor({}, 'surface');
@@ -29,18 +31,32 @@ export function IntegracionForm({ integracion }: { integracion: Integracion }) {
   const textColor = useThemeColor({}, 'text');
   const iconColor = useThemeColor({}, 'icon');
 
-  const completo = integracion.campos.every(
-    (c) => !c.requerido || (valores[c.key] ?? '').trim() !== ''
-  );
+  const completo = esperandoCodigo
+    ? /^\d{6}$/.test(codigo.trim())
+    : integracion.campos.every((c) => !c.requerido || (valores[c.key] ?? '').trim() !== '');
 
   const guardar = async () => {
     if (!completo) {
       aviso('Faltan datos', 'Completa los campos obligatorios antes de guardar.');
       return;
     }
+    const problema = integracion.validar?.(valores);
+    if (problema) {
+      aviso('Revisa los datos', problema);
+      return;
+    }
     setEnviando(true);
     try {
-      await crear(integracion, valores);
+      if (esperandoCodigo && integracion.verificacion) {
+        await verificar(integracion, valores[integracion.verificacion.campoClave] ?? '', codigo);
+      } else {
+        await crear(integracion, valores);
+        if (integracion.verificacion) {
+          setEsperandoCodigo(true);
+          mostrarToast('Código enviado a tu correo');
+          return;
+        }
+      }
       router.back();
       mostrarToast(`${integracion.tituloNuevo}: guardado correctamente`);
     } catch (e) {
@@ -58,7 +74,26 @@ export function IntegracionForm({ integracion }: { integracion: Integracion }) {
           Se envía a la API de {integracion.proveedor}.
         </ThemedText>
 
-        {integracion.campos.map((campo, i) => (
+        {esperandoCodigo && integracion.verificacion && (
+          <Animated.View entering={FadeInDown.springify().damping(16)} style={styles.grupo}>
+            <ThemedText type="caption">{integracion.verificacion.ayuda}</ThemedText>
+            <ThemedText style={styles.label}>Código de verificación *</ThemedText>
+            <View style={[styles.inputWrapper, { backgroundColor: surface, borderColor: border }]}>
+              <Ionicons name="keypad-outline" size={18} color={iconColor} />
+              <TextInput
+                style={[styles.input, { color: textColor }]}
+                placeholder="123456"
+                placeholderTextColor={iconColor}
+                value={codigo}
+                onChangeText={setCodigo}
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+            </View>
+          </Animated.View>
+        )}
+
+        {(esperandoCodigo ? [] : integracion.campos).map((campo, i) => (
           <Animated.View
             key={campo.key}
             entering={FadeInDown.delay(80 + i * 60).springify().damping(16)}
@@ -100,7 +135,9 @@ export function IntegracionForm({ integracion }: { integracion: Integracion }) {
           ) : (
             <>
               <Ionicons name="checkmark-circle" size={20} color="#151718" />
-              <ThemedText style={styles.botonTexto}>Guardar</ThemedText>
+              <ThemedText style={styles.botonTexto}>
+                {esperandoCodigo ? 'Verificar y crear' : integracion.verificacion ? 'Enviar código' : 'Guardar'}
+              </ThemedText>
             </>
           )}
         </AnimatedPressable>

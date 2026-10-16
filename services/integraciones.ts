@@ -80,3 +80,12 @@ export async function crear(integracion: Integracion, valores: Record<string, st
   }
   await pedir(integracion, integracion.rutaCrear, { method: 'POST', body: JSON.stringify(cuerpo) });
 }
+
+/** Segundo paso de los registros que exigen un código enviado por correo. */
+export async function verificar(integracion: Integracion, clave: string, codigo: string) {
+  if (!integracion.verificacion) throw new IntegracionError('Esta integración no requiere verificación.');
+  await pedir(integracion, integracion.verificacion.ruta, {
+    method: 'POST',
+    body: JSON.stringify({ [integracion.verificacion.campoClave]: clave.trim(), code: codigo.trim() }),
+  });
+}

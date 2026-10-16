@@ -47,6 +47,10 @@ export interface Integracion {
   /** Filtro opcional del listado (p. ej. solo viajes completados). */
   filtrar?: (item: Crudo) => boolean;
   mapear: (item: Crudo) => ItemVista;
+  /** Validación previa al envío; devuelve el mensaje de error si algo no cumple. */
+  validar?: (valores: Record<string, string>) => string | undefined;
+  /** Si la API pide confirmar con un código enviado por correo antes de crear el registro. */
+  verificacion?: { ruta: string; campoClave: string; ayuda: string };
 }
 
 /** Devuelve el primer valor no vacío entre varios nombres posibles de campo. */
@@ -110,8 +114,20 @@ export const PERFILES: Integracion = {
   campos: [
     { key: 'name', label: 'Nombre', icon: 'person-outline', requerido: true },
     { key: 'email', label: 'Correo electrónico', icon: 'mail-outline', requerido: true },
-    { key: 'password', label: 'Contraseña (mínimo 6)', icon: 'lock-closed-outline', requerido: true, tipo: 'password' },
+    { key: 'password', label: 'Contraseña (8+, una mayúscula y un símbolo)', icon: 'lock-closed-outline', requerido: true, tipo: 'password' },
   ],
+  validar: (v) => {
+    const clave = v.password ?? '';
+    if (clave.length < 8 || !/[A-Z]/.test(clave) || !/[^A-Za-z0-9]/.test(clave)) {
+      return 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un carácter especial (por ejemplo ! @ # $).';
+    }
+    return undefined;
+  },
+  verificacion: {
+    ruta: '/integraciones/perfiles/verificar',
+    campoClave: 'email',
+    ayuda: 'Se envió un código de 6 dígitos al correo indicado. Escríbelo para crear el perfil (vence en 10 minutos).',
+  },
   mapear: (item) => ({
     id: leer(item, 'id', '_id') ?? Math.random().toString(36).slice(2),
     titulo: leer(item, 'name', 'nombre') ?? 'Perfil',
