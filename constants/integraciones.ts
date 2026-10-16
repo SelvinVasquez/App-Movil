@@ -1,15 +1,15 @@
 import type Ionicons from '@expo/vector-icons/Ionicons';
 
+import { API_BASE_URL } from '@/services/api';
+
 /**
  * Integraciones del proyecto grupal con las APIs de los compañeros.
  *
  *  - Viajes   -> API de Lester Esquivel (App de agenda de viajes)
  *  - Perfiles -> API de Jose Rodriguez (App para deportistas de Gym)
  *
- * Las URLs base se definen en .env (EXPO_PUBLIC_VIAJES_API_URL y
- * EXPO_PUBLIC_PERFILES_API_URL). Las rutas y los nombres de los campos son
- * los que se esperan por defecto; si la API del compañero usa otros, basta
- * con cambiarlos aquí (rutas, `campos` y `mapear`).
+ * Las peticiones van a la API Laravel propia (`/api/integraciones/*`), que guarda las
+ * credenciales de los compañeros y llama a sus servicios; la app solo envía su token.
  */
 
 export type Crudo = Record<string, unknown>;
@@ -20,7 +20,7 @@ export interface CampoForm {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   requerido?: boolean;
-  tipo?: 'texto' | 'numero' | 'fecha' | 'largo';
+  tipo?: 'texto' | 'numero' | 'fecha' | 'largo' | 'password';
   /** Valor inicial; el usuario puede cambiarlo. */
   valorInicial?: string;
 }
@@ -72,17 +72,19 @@ export const VIAJES: Integracion = {
   tituloNuevo: 'Registrar viaje',
   proveedor: 'Lester Esquivel',
   icono: 'airplane-outline',
-  baseUrl: (process.env.EXPO_PUBLIC_VIAJES_API_URL ?? '').replace(/\/+$/, ''),
-  rutaLista: '/viajes',
-  rutaCrear: '/viajes',
+  baseUrl: API_BASE_URL,
+  rutaLista: '/integraciones/viajes',
+  rutaCrear: '/integraciones/viajes',
   campos: [
     { key: 'destino', label: 'Destino', icon: 'location-outline', requerido: true },
+    { key: 'pais', label: 'País', icon: 'earth-outline', valorInicial: 'Guatemala' },
     { key: 'fecha_inicio', label: 'Fecha de inicio (AAAA-MM-DD)', icon: 'calendar-outline', requerido: true, tipo: 'fecha' },
-    { key: 'fecha_fin', label: 'Fecha de fin (AAAA-MM-DD)', icon: 'calendar-outline', tipo: 'fecha' },
-    { key: 'estado', label: 'Estado', icon: 'flag-outline', requerido: true, valorInicial: 'completado' },
+    { key: 'fecha_fin', label: 'Fecha de fin (AAAA-MM-DD)', icon: 'calendar-outline', requerido: true, tipo: 'fecha' },
+    { key: 'presupuesto', label: 'Presupuesto (opcional)', icon: 'cash-outline', tipo: 'numero' },
+    { key: 'moneda', label: 'Moneda', icon: 'logo-usd', valorInicial: 'GTQ' },
     { key: 'descripcion', label: 'Descripción (opcional)', icon: 'document-text-outline', tipo: 'largo' },
   ],
-  filtrar: (item) => /complet/i.test(leer(item, 'estado', 'estatus', 'status', 'estado_nombre') ?? ''),
+  // El servidor solo devuelve viajes completados y fuerza ese estado al registrar.
   mapear: (item) => ({
     id: leer(item, 'id', '_id') ?? Math.random().toString(36).slice(2),
     titulo: leer(item, 'destino', 'nombre', 'titulo', 'pais', 'ciudad') ?? 'Viaje',
@@ -102,25 +104,19 @@ export const PERFILES: Integracion = {
   tituloNuevo: 'Registrar perfil',
   proveedor: 'Jose Rodriguez',
   icono: 'people-outline',
-  baseUrl: (process.env.EXPO_PUBLIC_PERFILES_API_URL ?? '').replace(/\/+$/, ''),
-  rutaLista: '/perfiles',
-  rutaCrear: '/perfiles',
+  baseUrl: API_BASE_URL,
+  rutaLista: '/integraciones/perfiles',
+  rutaCrear: '/integraciones/perfiles',
   campos: [
-    { key: 'nombre', label: 'Nombre', icon: 'person-outline', requerido: true },
+    { key: 'name', label: 'Nombre', icon: 'person-outline', requerido: true },
     { key: 'email', label: 'Correo electrónico', icon: 'mail-outline', requerido: true },
-    { key: 'edad', label: 'Edad', icon: 'time-outline', tipo: 'numero' },
-    { key: 'peso', label: 'Peso (kg)', icon: 'barbell-outline', tipo: 'numero' },
-    { key: 'objetivo', label: 'Objetivo (opcional)', icon: 'trophy-outline' },
+    { key: 'password', label: 'Contraseña (mínimo 6)', icon: 'lock-closed-outline', requerido: true, tipo: 'password' },
   ],
   mapear: (item) => ({
     id: leer(item, 'id', '_id') ?? Math.random().toString(36).slice(2),
-    titulo: leer(item, 'nombre', 'name', 'usuario', 'username') ?? 'Perfil',
+    titulo: leer(item, 'name', 'nombre') ?? 'Perfil',
     subtitulo: leer(item, 'email', 'correo'),
-    detalle: unir(
-      leer(item, 'objetivo', 'meta'),
-      leer(item, 'edad') ? `${leer(item, 'edad')} años` : undefined,
-      leer(item, 'peso') ? `${leer(item, 'peso')} kg` : undefined
-    ),
+    detalle: leer(item, 'role', 'rol'),
   }),
 };
 

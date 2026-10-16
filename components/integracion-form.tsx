@@ -81,7 +81,8 @@ export function IntegracionForm({ integracion }: { integracion: Integracion }) {
                 value={valores[campo.key]}
                 onChangeText={(texto) => setValores((v) => ({ ...v, [campo.key]: texto }))}
                 keyboardType={campo.tipo === 'numero' ? 'numeric' : 'default'}
-                autoCapitalize={campo.key === 'email' ? 'none' : 'sentences'}
+                secureTextEntry={campo.tipo === 'password'}
+                autoCapitalize={campo.tipo === 'password' || campo.key === 'email' ? 'none' : 'sentences'}
                 multiline={campo.tipo === 'largo'}
                 textAlignVertical={campo.tipo === 'largo' ? 'top' : 'center'}
               />

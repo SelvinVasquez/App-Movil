@@ -1,4 +1,5 @@
 import type { Crudo, Integracion } from '@/constants/integraciones';
+import { obtenerToken } from '@/services/api';
 
 /**
  * Cliente genérico para consumir las APIs de los compañeros.
@@ -36,15 +37,21 @@ function mensajeDeError(cuerpo: unknown, estado: number): string {
 async function pedir(integracion: Integracion, ruta: string, init?: RequestInit): Promise<unknown> {
   if (!integracion.baseUrl) {
     throw new IntegracionError(
-      `Falta configurar la URL de la API de ${integracion.proveedor} (variable EXPO_PUBLIC_${integracion.clave.toUpperCase()}_API_URL).`
+      `Falta configurar la URL de la API (EXPO_PUBLIC_API_URL).`
     );
   }
 
+  const token = await obtenerToken();
   let respuesta: Response;
   try {
     respuesta = await fetch(`${integracion.baseUrl}${ruta}`, {
       ...init,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...init?.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init?.headers,
+      },
     });
   } catch {
     throw new IntegracionError(`No se pudo conectar con la API de ${integracion.proveedor}.`);
