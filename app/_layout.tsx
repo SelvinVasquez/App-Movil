@@ -35,6 +35,10 @@ function Navigation() {
               options={{ presentation: 'modal', title: 'Editar película' }}
             />
             <Stack.Screen name="pelicula/[id]" options={{ title: 'Detalle' }} />
+            <Stack.Screen
+              name="integracion/[tipo]"
+              options={{ presentation: 'modal', title: 'Registrar' }}
+            />
           </Stack.Protected>
           <Stack.Protected guard={!usuario}>
             <Stack.Screen name="login" options={{ headerShown: false }} />
