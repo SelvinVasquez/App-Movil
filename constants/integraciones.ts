@@ -82,15 +82,15 @@ export const VIAJES: Integracion = {
     { key: 'fecha_fin', label: 'Fecha de fin (AAAA-MM-DD)', icon: 'calendar-outline', requerido: true, tipo: 'fecha' },
     { key: 'presupuesto', label: 'Presupuesto (opcional)', icon: 'cash-outline', tipo: 'numero' },
     { key: 'moneda', label: 'Moneda', icon: 'logo-usd', valorInicial: 'GTQ' },
-    { key: 'descripcion', label: 'Descripción (opcional)', icon: 'document-text-outline', tipo: 'largo' },
+    { key: 'descripcion', label: 'Descripción', icon: 'document-text-outline', requerido: true, tipo: 'largo' },
   ],
   // El servidor solo devuelve viajes completados y fuerza ese estado al registrar.
   mapear: (item) => ({
     id: leer(item, 'id', '_id') ?? Math.random().toString(36).slice(2),
     titulo: leer(item, 'destino', 'nombre', 'titulo', 'pais', 'ciudad') ?? 'Viaje',
     subtitulo: unir(
-      leer(item, 'fecha_inicio', 'fechaInicio', 'fecha_salida', 'fecha'),
-      leer(item, 'fecha_fin', 'fechaFin', 'fecha_regreso')
+      leer(item, 'fecha_inicio', 'fechaInicio', 'fecha_salida', 'fecha')?.slice(0, 10),
+      leer(item, 'fecha_fin', 'fechaFin', 'fecha_regreso')?.slice(0, 10)
     ),
     detalle: leer(item, 'descripcion', 'detalle', 'notas'),
     etiqueta: leer(item, 'estado', 'estatus', 'status'),
