@@ -25,6 +25,7 @@ const MAPPING = {
   'globe': 'public',
   airplane: 'flight',
   'person.fill': 'person',
+  'person.2.fill': 'groups',
 } as IconMapping;
 
 /**

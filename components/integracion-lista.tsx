@@ -73,6 +73,7 @@ export function IntegracionLista({ integracion }: { integracion: Integracion }) 
           <ThemedText type="title">{integracion.titulo}</ThemedText>
           <ThemedText type="caption">{integracion.subtitulo}</ThemedText>
         </View>
+        {!integracion.soloLectura && (
         <AnimatedPressable
           haptic
           accessibilityLabel={integracion.tituloNuevo}
@@ -80,6 +81,7 @@ export function IntegracionLista({ integracion }: { integracion: Integracion }) 
           style={[styles.addButton, { backgroundColor: accent }]}>
           <Ionicons name="add" size={26} color="#151718" />
         </AnimatedPressable>
+        )}
       </Animated.View>
 
       {estado === 'cargando' && (

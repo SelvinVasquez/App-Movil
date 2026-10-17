@@ -34,7 +34,7 @@ export interface ItemVista {
 }
 
 export interface Integracion {
-  clave: 'viajes' | 'perfiles';
+  clave: 'viajes' | 'perfiles' | 'comunidad';
   titulo: string;
   subtitulo: string;
   tituloNuevo: string;
@@ -47,6 +47,8 @@ export interface Integracion {
   /** Filtro opcional del listado (p. ej. solo viajes completados). */
   filtrar?: (item: Crudo) => boolean;
   mapear: (item: Crudo) => ItemVista;
+  /** Oculta el botón de registrar: la pantalla solo muestra datos. */
+  soloLectura?: boolean;
   /** Validación previa al envío; devuelve el mensaje de error si algo no cumple. */
   validar?: (valores: Record<string, string>) => string | undefined;
   /** Si la API pide confirmar con un código enviado por correo antes de crear el registro. */
@@ -134,6 +136,36 @@ export const PERFILES: Integracion = {
     subtitulo: leer(item, 'email', 'correo'),
     detalle: leer(item, 'role', 'rol'),
   }),
+};
+
+/** Catálogo público del grupo: lo que los compañeros registran por la API pública de películas. */
+export const COMUNIDAD: Integracion = {
+  clave: 'comunidad',
+  titulo: 'Comunidad',
+  subtitulo: 'Películas del catálogo general, registradas por el grupo',
+  tituloNuevo: 'Registrar película',
+  proveedor: 'CineTeca',
+  icono: 'film-outline',
+  baseUrl: API_BASE_URL,
+  rutaLista: '/publico/peliculas?per_page=50',
+  rutaCrear: '/publico/peliculas',
+  soloLectura: true,
+  campos: [],
+  mapear: (item) => {
+    const categoria = (item.categoria as Crudo | null | undefined)?.nombre;
+    const vistas = Number(item.visualizaciones ?? 0);
+    return {
+      id: leer(item, 'id') ?? Math.random().toString(36).slice(2),
+      titulo: leer(item, 'titulo') ?? 'Película',
+      subtitulo: unir(leer(item, 'anio'), typeof categoria === 'string' ? categoria : leer(item, 'genero')),
+      detalle: leer(item, 'sinopsis'),
+      etiqueta: leer(item, 'calificacion')
+        ? `★ ${leer(item, 'calificacion')}`
+        : vistas > 0
+          ? `${vistas} vistas`
+          : undefined,
+    };
+  },
 };
 
 export const INTEGRACIONES = { viajes: VIAJES, perfiles: PERFILES } as const;
