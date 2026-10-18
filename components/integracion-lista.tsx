@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { type Href, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -13,7 +13,14 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { listar } from '@/services/integraciones';
 
 /** Pantalla de listado para una API de un compañero, con botón para registrar uno nuevo. */
-export function IntegracionLista({ integracion }: { integracion: Integracion }) {
+export function IntegracionLista({
+  integracion,
+  encabezado,
+}: {
+  integracion: Integracion;
+  /** Contenido opcional bajo el título (por ejemplo, filtros). */
+  encabezado?: ReactNode;
+}) {
   const router = useRouter();
   const [items, setItems] = useState<ItemVista[]>([]);
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
@@ -83,6 +90,8 @@ export function IntegracionLista({ integracion }: { integracion: Integracion }) 
         </AnimatedPressable>
         )}
       </Animated.View>
+
+      {encabezado}
 
       {estado === 'cargando' && (
         <View style={styles.centro}>

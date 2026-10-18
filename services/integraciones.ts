@@ -1,4 +1,4 @@
-import type { Crudo, Integracion } from '@/constants/integraciones';
+import { COMUNIDAD, type Crudo, type Integracion } from '@/constants/integraciones';
 import { obtenerToken } from '@/services/api';
 
 /**
@@ -88,4 +88,15 @@ export async function verificar(integracion: Integracion, clave: string, codigo:
     method: 'POST',
     body: JSON.stringify({ [integracion.verificacion.campoClave]: clave.trim(), code: codigo.trim() }),
   });
+}
+
+export interface Autor {
+  autor: string;
+  peliculas: number;
+}
+
+/** Quién ha registrado películas en el catálogo público y cuántas. */
+export async function listarAutores(): Promise<Autor[]> {
+  const cuerpo = await pedir(COMUNIDAD, '/publico/autores');
+  return extraerLista(cuerpo) as unknown as Autor[];
 }

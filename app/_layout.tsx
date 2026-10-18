@@ -1,11 +1,16 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { MoviesProvider } from '@/contexts/MoviesContext';
 import { AppThemeProvider, useAppTheme } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { Colors } from '@/constants/theme';
+
+/** Ancho máximo del contenido en la web: evita que la app se estire en pantallas grandes. */
+const ANCHO_MAXIMO_WEB = 640;
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -21,6 +26,12 @@ function Navigation() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <View style={[estilos.fondo, { backgroundColor: Colors[colorScheme].surface }]}>
+      <View
+        style={[
+          estilos.columna,
+          { backgroundColor: Colors[colorScheme].background, borderColor: Colors[colorScheme].border },
+        ]}>
       <MoviesProvider>
         <ToastProvider>
         <Stack>
@@ -48,9 +59,20 @@ function Navigation() {
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         </ToastProvider>
       </MoviesProvider>
+      </View>
+      </View>
     </ThemeProvider>
   );
 }
+
+const estilos = StyleSheet.create({
+  fondo: { flex: 1, alignItems: 'center' },
+  columna: {
+    flex: 1,
+    width: '100%',
+    ...(Platform.OS === 'web' ? { maxWidth: ANCHO_MAXIMO_WEB, borderLeftWidth: 1, borderRightWidth: 1 } : null),
+  },
+});
 
 export default function RootLayout() {
   return (
