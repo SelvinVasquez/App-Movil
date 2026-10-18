@@ -7,6 +7,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { AnimatedPressable } from '@/components/animated-pressable';
 
 import { Chip } from '@/components/chip';
+import { ChipsRow } from '@/components/chips-row';
 import { MovieCard } from '@/components/movie-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -76,21 +77,17 @@ export default function HomeScreen() {
         </AnimatedPressable>
       </Animated.View>
 
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={FILTROS}
-        keyExtractor={(item) => item.key}
-        contentContainerStyle={styles.filtros}
-        renderItem={({ item }) => (
+      <ChipsRow>
+        {FILTROS.map((item) => (
           <Chip
+            key={item.key}
             label={item.label}
             icon={item.icon}
             active={filtro === item.key}
             onPress={() => setFiltro(item.key)}
           />
-        )}
-      />
+        ))}
+      </ChipsRow>
 
       {cargando && peliculas.length === 0 ? (
         <View style={styles.vacioWrapper}>
@@ -134,9 +131,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   subtitle: { marginTop: 2 },
-  // En nativo, una FlatList horizontal se estira en vertical dentro de un contenedor flex; flexGrow 0 la limita a su contenido.
-  filtrosLista: { flexGrow: 0, flexShrink: 0 },
-  filtros: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, paddingBottom: Spacing.lg },
   // La lista ocupa el resto de la pantalla y arranca arriba, sin centrar el contenido.
   listaVertical: { flex: 1, alignSelf: 'stretch' },
   list: { justifyContent: 'flex-start', paddingHorizontal: Spacing.xl, paddingBottom: 24, gap: Spacing.md },

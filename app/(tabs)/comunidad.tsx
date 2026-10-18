@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { AnimatedPressable } from '@/components/animated-pressable';
+import { ChipsRow } from '@/components/chips-row';
 import { IntegracionLista } from '@/components/integracion-lista';
 import { ThemedText } from '@/components/themed-text';
 import { COMUNIDAD, type Integracion } from '@/constants/integraciones';
@@ -69,11 +70,7 @@ export default function ComunidadScreen() {
       key={activo}
       integracion={integracion}
       encabezado={
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-          style={styles.chipsScroll}>
+        <ChipsRow>
           {opciones.map((o) => {
             const seleccionado = o.autor === activo;
             return (
@@ -92,15 +89,13 @@ export default function ComunidadScreen() {
               </AnimatedPressable>
             );
           })}
-        </ScrollView>
+        </ChipsRow>
       }
     />
   );
 }
 
 const styles = StyleSheet.create({
-  chipsScroll: { flexGrow: 0, marginBottom: Spacing.md },
-  chips: { paddingHorizontal: Spacing.xl, gap: Spacing.sm },
   chip: {
     borderWidth: 1,
     borderRadius: Radius.full,

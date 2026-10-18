@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
+import { ChipsRow } from '@/components/chips-row';
 import { MovieCard } from '@/components/movie-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -92,7 +93,7 @@ export default function ExploreScreen() {
         )}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+      <ChipsRow>
         <Chip label="Todos los géneros" active={!generoActivo} onPress={() => setGeneroActivo(null)} />
         {generos.map((genero) => (
           <Chip
@@ -102,9 +103,9 @@ export default function ExploreScreen() {
             onPress={() => setGeneroActivo(generoActivo === genero ? null : genero)}
           />
         ))}
-      </ScrollView>
+      </ChipsRow>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+      <ChipsRow>
         {ORDENES.map((item) => (
           <Chip
             key={item.key}
@@ -114,7 +115,7 @@ export default function ExploreScreen() {
             onPress={() => setOrden(item.key)}
           />
         ))}
-      </ScrollView>
+      </ChipsRow>
 
       <FlatList
         data={resultados}
@@ -148,7 +149,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   buscador: { flex: 1, fontSize: 16 },
-  chipsRow: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, paddingBottom: Spacing.sm },
   list: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm, paddingBottom: 24, gap: Spacing.md },
   vacioWrapper: { alignItems: 'center', marginTop: 60, gap: 10 },
 });
